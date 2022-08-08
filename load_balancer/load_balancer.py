@@ -1,16 +1,10 @@
 import json
-import math
 import logging
 import random
 from rich import print
-from scipy.stats import poisson
 import socket
 import threading
 import time
-
-N = 10000
-WEIGHT_MEAN = 100
-WAIT_MEAN = 50
 
 WORKER_SELECTION_MODE = 'roundrobin'
 WORKERS = [
@@ -19,6 +13,8 @@ WORKERS = [
     ('127.0.0.1', 6870),
     ('127.0.0.1', 6871),
 ]
+
+job_list = []
 
 last_used_worker_index_lock = threading.Lock()
 last_used_worker_index = -1
@@ -29,16 +25,19 @@ jobs_completed_lock = threading.Lock()
 jobs_completed = 0
 
 def generate_jobs():
-    print(f'Populating {N} jobs.')
-    weights = poisson.rvs(mu = WEIGHT_MEAN, size = N)
-    for i in range(N):
-        job_list.append({
-            'id': i + 1,
-            'weight': int(weights[i]),
-        })
+    with open('weights.csv', 'r') as f:
+        weights = f.readline().split(',')
+        for i in range(len(weights)):
+            job_list.append({
+                'id': i + 1,
+                'weight': int(weights[i]),
+            })
 
 def distribute_jobs():
-    waits = poisson.rvs(mu = WAIT_MEAN, size = N)
+    waits = []
+    with open('waits.csv', 'r') as f:
+        waits = f.readline().split(',')
+
     for (i, job) in enumerate(job_list):
         thread = threading.Thread(
             target = threaded_pass_to_worker,
@@ -85,7 +84,7 @@ def select_worker():
 
 if __name__ == '__main__':
     logging.basicConfig(
-        filename = f'{math.floor(time.time())}.log',
+        filename = f'{time.strftime("%Y-%m-%d-%H-%M-%S")}-{WORKER_SELECTION_MODE}.log',
         format = '%(asctime)s;%(message)s',
         level = logging.DEBUG,
     )
