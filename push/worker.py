@@ -3,6 +3,7 @@
 # Usage: ./worker.py [port] [power]
 
 import json
+import os
 import queue
 from rich import print
 import socket
@@ -10,12 +11,11 @@ import sys
 import threading
 import time
 
-HOST_ADDR = '127.0.0.1'
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-THREAD_COUNT = 1
-QUEUE_MAX_SIZE = 1000
+import config
 
-job_queue = queue.Queue(QUEUE_MAX_SIZE)
+job_queue = queue.Queue(config.WORKER_QUEUE_MAX_SIZE)
 
 jobs_received_lock = threading.Lock()
 jobs_received = 0
@@ -23,11 +23,11 @@ jobs_completed_lock = threading.Lock()
 jobs_completed = 0
 
 def start_processing_thread(power: int):
-    print(f'[blue]Queue maximum size is {QUEUE_MAX_SIZE}.[/blue]')
-    print(f'[blue]Thread count is {QUEUE_MAX_SIZE}.[/blue]')
+    print(f'[blue]Queue maximum size is {config.WORKER_QUEUE_MAX_SIZE}.[/blue]')
+    print(f'[blue]Thread count is {config.WORKER_THREAD_COUNT}.[/blue]')
     print(f'[blue]Power is {power}.[/blue]')
 
-    for i in range(THREAD_COUNT):
+    for i in range(config.WORKER_THREAD_COUNT):
         thread = threading.Thread(
             target = processing_thread,
             args = (i + 1, power,),
@@ -98,4 +98,4 @@ if __name__ == '__main__':
 
         start_processing_thread(int(sys.argv[2]))
 
-        start_listening(HOST_ADDR, int(sys.argv[1]))
+        start_listening(config.WORKER_HOST_ADDR, int(sys.argv[1]))
