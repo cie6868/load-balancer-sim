@@ -2,43 +2,73 @@
 
 # Usage: ./lb_graph.py
 
-from matplotlib import ticker, pyplot
+from matplotlib import pyplot
 import numpy
+import pandas
+import seaborn
 import sys
 
 fig, axs = pyplot.subplots(2)
 
+df = pandas.DataFrame({
+    'Dataset': [],
+    'Job Weight': [],
+    'Worker Assigned': [],
+    'Start Time': [],
+    'End Time': []
+})
+# df_response_times = pandas.DataFrame({
+#     'Dataset': [],
+#     'Job ID': [],
+#     'Response Time': []
+# })
+# df_job_counts = pandas.DataFrame({
+#     'Dataset': [],
+#     'Worker': [],
+#     'Jobs': []
+# })
+
 for i in range(len(sys.argv) - 1):
     filename = sys.argv[i + 1]
+    print(filename)
+
     with open(filename, 'r') as f:
-        job_weights = []
-        worker_assigned = []
-        start_times = []
-        end_times = []
-        response_times = []
-        response_times_norm = []
+        # job_weights = []
+        # worker_assigned = []
+        # start_times = []
+        # end_times = []
+        # response_times = []
+        # response_times_norm = []
 
         next(f)
         for line in f:
             parts = line.split(',')
-            job_weights.append(int(parts[1]))
-            worker_assigned.append(parts[2])
-            start_times.append(int(parts[3]))
-            end_times.append(int(parts[4]))
-            response_times.append((end_times[-1] - start_times[-1]) / 1E6)
-            response_times_norm.append(response_times[-1] / job_weights[-1])
+            # job_weights.append(int(parts[1]))
+            # worker_assigned.append(parts[2])
+            # start_times.append(int(parts[3]))
+            # end_times.append(int(parts[4]))
+            # response_times.append((end_times[-1] - start_times[-1]) / 1E6)
+            # response_times_norm.append(response_times[-1] / job_weights[-1])
 
-        print(max(response_times_norm))
-        print(min(response_times_norm))
-        bins = numpy.linspace(numpy.floor(min(response_times_norm)), numpy.ceil(max(response_times_norm)), 500)
-        weights = numpy.ones(len(response_times_norm)) / len(response_times_norm)
-        axs[0].hist(response_times_norm, bins = bins, weights = weights, histtype = 'step', label = filename)
+            df.loc[len(df)] = {
+                'Dataset': filename,
+                'Job Weight': int(parts[1]),
+                'Worker Assigned': int(parts[2]),
+                'Start Time': int(parts[3]),
+                'End Time': int(parts[4])
+            }
 
-        axs[1].hist(worker_assigned, histtype = 'step', label = filename)
+df['Response Time'] = (df['End Time'] - df['Start Time']) / 1E6
 
-axs[0].yaxis.set_major_formatter(ticker.PercentFormatter(1))
-axs[0].legend()
+job_counts_by_worker = df.groupby('Dataset')['Worker Assigned'].value_counts().to_frame('Jobs')
 
-axs[1].legend()
+print(df.groupby('Dataset')['Response Time'].quantile(q = [0.5, 0.9, 0.95, 0.99]))
+
+dfx = df[df['Response Time'] <= 1000]
+p1 = seaborn.histplot(ax = axs[0], data = dfx, x = 'Response Time', hue = 'Dataset', binwidth = 1, stat = 'percent')
+
+p2 = seaborn.barplot(ax = axs[1], data = job_counts_by_worker, x = 'Worker Assigned', y = 'Jobs', hue = 'Dataset')
+for container in axs[1].containers:
+    axs[1].bar_label(container, label_type = 'center')
 
 pyplot.show()
