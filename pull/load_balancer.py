@@ -144,4 +144,4 @@ if __name__ == '__main__':
 
     distribute_jobs()
 
-    print(f'[blue]Data written to {log_filename}.[/blue]')
+    print(f'[blue]Data written to {log_filename}[/blue]')

@@ -93,13 +93,16 @@ def queue_incoming_job(con: socket.socket):
 
 if __name__ == '__main__':
     if len(sys.argv) > 2 and sys.argv[1].isnumeric() and sys.argv[2].isnumeric():
+        port = int(sys.argv[1])
+        power = int(sys.argv[2])
+
         with jobs_received_lock:
             jobs_received = 0
         with jobs_completed_lock:
             jobs_completed = 0
 
-        print('[blue bold]Worker (push)[/blue bold]')
+        print(f'[blue bold]Worker (push) - ID {port}[/blue bold]')
 
-        start_processing_threads(int(sys.argv[2]))
+        start_processing_threads(power)
 
-        start_listening(config.WORKER_HOST_ADDR, int(sys.argv[1]))
+        start_listening(config.WORKER_HOST_ADDR, port)

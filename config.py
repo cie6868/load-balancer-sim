@@ -1,4 +1,4 @@
-LB_RUNTIME_SECONDS = 1 * 60
+LB_RUNTIME_SECONDS = 2 * 60
 LB_WORKERS = [
     ('127.0.0.1', 6868),
     ('127.0.0.1', 6869),
