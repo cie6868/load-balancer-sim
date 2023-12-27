@@ -40,7 +40,7 @@ def distribute_jobs():
     with open('job_intervals.csv', 'r') as f:
         job_intervals = f.readline().split(',')
 
-    logging.debug('job_id,job_weight,worker,dispatch_time,response_time')
+    logging.debug('job_id,job_weight,worker,queued_time,response_time')
 
     for (i, job) in enumerate(job_list):
         thread = threading.Thread(
@@ -65,7 +65,7 @@ def threaded_pass_to_worker(job: object):
             sock.connect((host, port))
             sock.sendall(bytes([len(encoded_job)]))
             sock.sendall(encoded_job)
-            send_time = time.time_ns()
+            queued_time = time.time_ns()
 
             response = sock.recv(1)
             recv_time = time.time_ns()
@@ -73,11 +73,12 @@ def threaded_pass_to_worker(job: object):
 
             sock.close()
 
-            logging.debug(f'{job["id"]},{job["weight"]},{host}:{port},{send_time},{recv_time}')
+            logging.debug(f'{job["id"]},{job["weight"]},{host}:{port},{queued_time},{recv_time}')
 
             with jobs_completed_var_lock:
                 jobs_completed += 1
     except ConnectionError:
+        print('[red bold]ConnectionError[/red bold]')
         print(f'[red]Worker {host}:{port} is offline[/red]')
 
 def select_worker():

@@ -22,7 +22,7 @@ jobs_received = 0
 jobs_completed_lock = threading.Lock()
 jobs_completed = 0
 
-def start_processing_thread(power: int):
+def start_processing_threads(power: int):
     print(f'[blue]Queue maximum size is {config.WORKER_QUEUE_MAX_SIZE}.[/blue]')
     print(f'[blue]Thread count is {config.WORKER_THREAD_COUNT}.[/blue]')
     print(f'[blue]Power is {power}.[/blue]')
@@ -57,6 +57,7 @@ def processing_thread(thread_id: int, power: int):
             print(f'[blue]Completed job {job["id"]}.[/blue]')
 
     except (KeyboardInterrupt, SystemExit):
+        print('[red bold]KeyboardInterrupt / SystemExit[/red bold]')
         print(f'[blue]Stopped processing on thread {thread_id}.[/blue]')
 
 def start_listening(address: str, port: int):
@@ -70,7 +71,10 @@ def start_listening(address: str, port: int):
                 print(f'[yellow]Connection from {con_addr}.[/yellow]')
                 queue_incoming_job(con)
         except KeyboardInterrupt:
+            print('[red bold]KeyboardInterrupt[/red bold]')
+
             sock.close()
+
         print('Stopped listening.')
         print(f'Jobs recevied: {jobs_received}')
         print(f'Jobs completed: {jobs_completed}')
@@ -88,14 +92,14 @@ def queue_incoming_job(con: socket.socket):
     print(f'[yellow]Queued job ID {job["id"]} and weight {job["weight"]}.[/yellow]')
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1 and sys.argv[1].isnumeric() and sys.argv[2].isnumeric():
+    if len(sys.argv) > 2 and sys.argv[1].isnumeric() and sys.argv[2].isnumeric():
         with jobs_received_lock:
             jobs_received = 0
         with jobs_completed_lock:
             jobs_completed = 0
 
-        print('[blue bold]Worker[/blue bold]')
+        print('[blue bold]Worker (push)[/blue bold]')
 
-        start_processing_thread(int(sys.argv[2]))
+        start_processing_threads(int(sys.argv[2]))
 
         start_listening(config.WORKER_HOST_ADDR, int(sys.argv[1]))
