@@ -69,7 +69,7 @@ def start_listening(address: str, port: int):
             while True:
                 (con, con_addr) = sock.accept()
                 print(f'[yellow]Connection from {con_addr}.[/yellow]')
-                queue_incoming_job(con)
+                queue_incoming_job(con, port)
         except KeyboardInterrupt:
             print('[red bold]KeyboardInterrupt[/red bold]')
 
@@ -79,13 +79,16 @@ def start_listening(address: str, port: int):
         print(f'Jobs recevied: {jobs_received}')
         print(f'Jobs completed: {jobs_completed}')
 
-def queue_incoming_job(con: socket.socket):
+def queue_incoming_job(con: socket.socket, worker_id: int):
     global jobs_received
+
+    con.sendall(int.to_bytes(worker_id, 2, 'big'))
 
     message_length = int.from_bytes(con.recv(1), 'big')
     encoded_job_bytes = con.recv(message_length)
     job = json.loads(encoded_job_bytes.decode('utf-8'))
     job_queue.put((job, con))
+
     with jobs_received_lock:
         jobs_received += 1
 

@@ -57,12 +57,18 @@ def distribute_jobs():
 
 def threaded_pass_to_worker(job: object):
     global jobs_completed
+
     (host, port) = select_worker()
+
     print(f'[yellow]Sending job {job["id"]} with weight {job["weight"]} to worker {port}...[/yellow]')
+
     encoded_job = json.dumps(job).encode('utf-8')
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((host, port))
+
+            worker_id = int.from_bytes(sock.recv(2), 'big')
+
             sock.sendall(bytes([len(encoded_job)]))
             sock.sendall(encoded_job)
             queued_time = time.time_ns()
@@ -73,7 +79,7 @@ def threaded_pass_to_worker(job: object):
 
             sock.close()
 
-            logging.debug(f'{job["id"]},{job["weight"]},{port},{queued_time},{recv_time}')
+            logging.debug(f'{job["id"]},{job["weight"]},{worker_id},{queued_time},{recv_time}')
 
             with jobs_completed_var_lock:
                 jobs_completed += 1
