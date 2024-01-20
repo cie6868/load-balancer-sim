@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+sys.path.insert(1, os.path.join(sys.path[0], '../..'))
 
 import config
 from job_generator import generate_jobs
