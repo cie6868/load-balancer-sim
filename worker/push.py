@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-# Usage: ./worker.py [port] [power]
+# Usage: ./push.py [port] [power]
 
 import json
-import os
 import queue
 from rich import print
 import socket
@@ -11,11 +10,10 @@ import sys
 import threading
 import time
 
-sys.path.insert(1, os.path.join(sys.path[0], '../..'))
+WORKER_QUEUE_MAX_SIZE = 1000
+WORKER_THREAD_COUNT = 1
 
-import config
-
-job_queue = queue.Queue(config.WORKER_QUEUE_MAX_SIZE)
+job_queue = queue.Queue(WORKER_QUEUE_MAX_SIZE)
 
 jobs_received_lock = threading.Lock()
 jobs_received = 0
@@ -23,11 +21,11 @@ jobs_completed_lock = threading.Lock()
 jobs_completed = 0
 
 def start_processing_threads(power: int):
-    print(f'[blue]Queue maximum size is {config.WORKER_QUEUE_MAX_SIZE}.[/blue]')
-    print(f'[blue]Thread count is {config.WORKER_THREAD_COUNT}.[/blue]')
+    print(f'[blue]Queue maximum size is {WORKER_QUEUE_MAX_SIZE}.[/blue]')
+    print(f'[blue]Thread count is {WORKER_THREAD_COUNT}.[/blue]')
     print(f'[blue]Power is {power}.[/blue]')
 
-    for i in range(config.WORKER_THREAD_COUNT):
+    for i in range(WORKER_THREAD_COUNT):
         thread = threading.Thread(
             target = processing_thread,
             args = (i + 1, power,),
@@ -108,4 +106,6 @@ if __name__ == '__main__':
 
         start_processing_threads(power)
 
-        start_listening(config.WORKER_HOST_ADDR, port)
+        start_listening('0.0.0.0', port)
+    else:
+        print('Invalid arugments.')

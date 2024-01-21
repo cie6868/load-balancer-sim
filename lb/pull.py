@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-# Usage: ./load_balancer.py pull [mean processing time of jobs (ms)] [mean interval between jobs (ms)]
+# Usage: ./pull.py [runtime (min)] [mean processing time of jobs (ms)] [mean interval between jobs (ms)] [lb_port]
 
 import json
 import logging
-import os
 from pathlib import Path
 import queue
 from rich import print
@@ -13,13 +12,13 @@ import sys
 import threading
 import time
 
-sys.path.insert(1, os.path.join(sys.path[0], '../..'))
-
-import config
 from job_generator import generate_jobs
 
+LB_OUTPUT_FOLDER = 'outputs'
+LB_QUEUE_MAX_SIZE = 1000
+
 job_list = []
-job_queue = queue.Queue(config.WORKER_QUEUE_MAX_SIZE)
+job_queue = queue.Queue(LB_QUEUE_MAX_SIZE)
 
 jobs_completed_var_lock = threading.Lock()
 jobs_completed = 0
@@ -33,17 +32,17 @@ def load_jobs():
                 'weight': int(job_weights[i]),
             })
 
-def distribute_jobs():
+def distribute_jobs(lb_port: int):
     job_intervals = []
     with open('job_intervals.csv', 'r') as f:
         job_intervals = f.readline().split(',')
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind((config.LB_PULL_ADDR, config.LB_PULL_PORT))
+        sock.bind(('0.0.0.0', lb_port))
 
         logging.debug('job_id,job_weight,worker,queued_time,response_time')
 
-        print(f'[yellow]Listening for job requests on port {config.LB_PULL_PORT}...[/yellow]')
+        print(f'[yellow]Listening for job requests on port {lb_port}...[/yellow]')
         sock.listen()
 
         thread = threading.Thread(
@@ -65,9 +64,11 @@ def distribute_jobs():
         while len(job_list) > jobs_completed:
             time.sleep(1)
 
+        thread.join()
+
 def threaded_listen_for_job_requests(sock: socket.socket):
     try:
-        while True:
+        while len(job_list) > jobs_completed:
             (con, con_addr) = sock.accept()
             print(f'[blue]Connection from {con_addr}.[/blue]')
 
@@ -120,28 +121,32 @@ def threaded_pass_to_worker(con: socket.socket, worker_addr):
         con.close()
 
 if __name__ == '__main__':
-    algo = 'push'
-    job_weight_mean = int(sys.argv[2])
-    job_interval_mean = int(sys.argv[3])
+    if len(sys.argv) > 4 and sys.argv[2].isnumeric() and sys.argv[3].isnumeric() and sys.argv[4].isnumeric():
+        runtime_min = float(sys.argv[1])
+        job_weight_mean = int(sys.argv[2])
+        job_interval_mean = int(sys.argv[3])
+        lb_port = int(sys.argv[4])
 
-    Path(config.LB_OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
+        Path(LB_OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    time_str = time.strftime("%Y-%m-%d-%H-%M-%S")
-    log_filename = f'{config.LB_OUTPUT_FOLDER}/{time_str}-{algo}-{job_weight_mean}-{job_interval_mean}.csv'
-    logging.basicConfig(
-        filename = log_filename,
-        format = '%(message)s',
-        level = logging.DEBUG,
-    )
-    print(f'[blue bold]Load Balancer ({algo})[/blue bold]')
+        time_str = time.strftime("%Y%m%d-%H%M%S")
+        log_filename = f'{LB_OUTPUT_FOLDER}/{time_str}-pull-{job_weight_mean}-{job_interval_mean}.csv'
+        logging.basicConfig(
+            filename = log_filename,
+            format = '%(message)s',
+            level = logging.DEBUG,
+        )
+        print(f'[blue bold]Load Balancer (pull)[/blue bold]')
 
-    num_jobs = int(config.LB_RUNTIME_SECONDS * 1000 / job_interval_mean)
-    print(f'[blue]Will dispatch {num_jobs} over {config.LB_RUNTIME_SECONDS} seconds.[/blue]')
+        num_jobs = int(runtime_min * 60 * 1000 / job_interval_mean)
+        print(f'[blue]Will dispatch {num_jobs} over {runtime_min} minutes.[/blue]')
 
-    generate_jobs(num_jobs, job_weight_mean, job_interval_mean)
+        generate_jobs(num_jobs, job_weight_mean, job_interval_mean)
 
-    load_jobs()
+        load_jobs()
 
-    distribute_jobs()
+        distribute_jobs(lb_port)
 
-    print(f'[blue]Data written to {log_filename}[/blue]')
+        print(f'[blue]Data written to {log_filename}[/blue]')
+    else:
+        print('Invalid arugments.')

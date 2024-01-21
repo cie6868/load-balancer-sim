@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-# Usage: ./load_balancer.py [algorithm (roundrobin/random)] [mean processing time of jobs (ms)] [mean interval between jobs (ms)]
+# Usage: ./push.py [algorithm (roundrobin/random)] [runtime (min)] [mean processing time of jobs (ms)] [mean interval between jobs (ms)]
 
 import json
 import logging
-import os
 from pathlib import Path
 import random
 from rich import print
@@ -13,10 +12,10 @@ import sys
 import threading
 import time
 
-sys.path.insert(1, os.path.join(sys.path[0], '../..'))
-
-import config
 from job_generator import generate_jobs
+from push_config import PUSH_WORKERS
+
+LB_OUTPUT_FOLDER = 'outputs'
 
 job_list = []
 
@@ -75,7 +74,7 @@ def threaded_pass_to_worker(job: object):
 
             response = sock.recv(1)
             recv_time = time.time_ns()
-            print(f'[yellow]Got response {"SUCCESS" if response == b"1" else "FAILURE"} for job {job["id"]}.[/yellow]')
+            print(f'[blue]Got response {"SUCCESS" if response == b"1" else "FAILURE"} for job {job["id"]}.[/blue]')
 
             sock.close()
 
@@ -92,35 +91,39 @@ def select_worker():
 
     algo = sys.argv[1]
     if algo == 'random':
-        return random.choice(config.LB_WORKERS)
+        return random.choice(PUSH_WORKERS)
     elif algo == 'roundrobin':
         with last_used_worker_index_var_lock:
-            last_used_worker_index = last_used_worker_index + 1 if last_used_worker_index + 1 < len(config.LB_WORKERS) else 0
-            return config.LB_WORKERS[last_used_worker_index]
+            last_used_worker_index = last_used_worker_index + 1 if last_used_worker_index + 1 < len(PUSH_WORKERS) else 0
+            return PUSH_WORKERS[last_used_worker_index]
 
 if __name__ == '__main__':
-    algo = sys.argv[1]
-    job_weight_mean = int(sys.argv[2])
-    job_interval_mean = int(sys.argv[3])
+    if len(sys.argv) > 4 and sys.argv[3].isnumeric() and sys.argv[4].isnumeric():
+        algo = sys.argv[1]
+        runtime_min = float(sys.argv[2])
+        job_weight_mean = int(sys.argv[3])
+        job_interval_mean = int(sys.argv[4])
 
-    Path(config.LB_OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
+        Path(LB_OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    time_str = time.strftime("%Y-%m-%d-%H-%M-%S")
-    log_filename = f'{config.LB_OUTPUT_FOLDER}/{time_str}-{algo}-{job_weight_mean}-{job_interval_mean}.csv'
-    logging.basicConfig(
-        filename = log_filename,
-        format = '%(message)s',
-        level = logging.DEBUG,
-    )
-    print(f'[blue bold]Load Balancer ({algo})[/blue bold]')
+        time_str = time.strftime("%Y%m%d-%H%M%S")
+        log_filename = f'{LB_OUTPUT_FOLDER}/{time_str}-{algo}-{job_weight_mean}-{job_interval_mean}.csv'
+        logging.basicConfig(
+            filename = log_filename,
+            format = '%(message)s',
+            level = logging.DEBUG,
+        )
+        print(f'[blue bold]Load Balancer ({algo})[/blue bold]')
 
-    num_jobs = int(config.LB_RUNTIME_SECONDS * 1000 / job_interval_mean)
-    print(f'[blue]Will dispatch {num_jobs} over {config.LB_RUNTIME_SECONDS} seconds.[/blue]')
+        num_jobs = int(runtime_min * 60 * 1000 / job_interval_mean)
+        print(f'[blue]Will dispatch {num_jobs} over {runtime_min} minutes.[/blue]')
 
-    generate_jobs(num_jobs, job_weight_mean, job_interval_mean)
+        generate_jobs(num_jobs, job_weight_mean, job_interval_mean)
 
-    load_jobs()
+        load_jobs()
 
-    distribute_jobs()
+        distribute_jobs()
 
-    print(f'[blue]Data written to {log_filename}[/blue]')
+        print(f'[blue]Data written to {log_filename}[/blue]')
+    else:
+        print('Invalid arugments.')

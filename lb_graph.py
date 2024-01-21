@@ -3,12 +3,12 @@
 # Usage: ./lb_graph.py
 
 from matplotlib import pyplot
-import numpy
 import pandas
 import seaborn
 import sys
 
-fig, axs = pyplot.subplots(2)
+pyplot.figure(figsize = (10, 6))
+seaborn.set_theme(style = 'whitegrid')
 
 df = pandas.DataFrame({
     'Dataset': [],
@@ -17,41 +17,19 @@ df = pandas.DataFrame({
     'Start Time': [],
     'End Time': []
 })
-# df_response_times = pandas.DataFrame({
-#     'Dataset': [],
-#     'Job ID': [],
-#     'Response Time': []
-# })
-# df_job_counts = pandas.DataFrame({
-#     'Dataset': [],
-#     'Worker': [],
-#     'Jobs': []
-# })
 
 for i in range(len(sys.argv) - 1):
     filename = sys.argv[i + 1]
     print(filename)
 
     with open(filename, 'r') as f:
-        # job_weights = []
-        # worker_assigned = []
-        # start_times = []
-        # end_times = []
-        # response_times = []
-        # response_times_norm = []
+        next(f) # skip title line
 
-        next(f)
         for line in f:
             parts = line.split(',')
-            # job_weights.append(int(parts[1]))
-            # worker_assigned.append(parts[2])
-            # start_times.append(int(parts[3]))
-            # end_times.append(int(parts[4]))
-            # response_times.append((end_times[-1] - start_times[-1]) / 1E6)
-            # response_times_norm.append(response_times[-1] / job_weights[-1])
 
             df.loc[len(df)] = {
-                'Dataset': filename,
+                'Dataset': i + 1,
                 'Job Weight': int(parts[1]),
                 'Worker Assigned': int(parts[2]),
                 'Start Time': int(parts[3]),
@@ -62,13 +40,31 @@ df['Response Time'] = (df['End Time'] - df['Start Time']) / 1E6
 
 job_counts_by_worker = df.groupby('Dataset')['Worker Assigned'].value_counts().to_frame('Jobs')
 
-print(df.groupby('Dataset')['Response Time'].quantile(q = [0.5, 0.9, 0.95, 0.99]))
+percentiles = pandas.DataFrame({
+    'Dataset': [],
+    'Percentile': [],
+    'Response Time': []
+})
 
-dfx = df[df['Response Time'] <= 1000]
-p1 = seaborn.histplot(ax = axs[0], data = dfx, x = 'Response Time', hue = 'Dataset', binwidth = 1, stat = 'percent')
+for d in df['Dataset'].unique():
+    for p in [0, 25, 50, 75, 90, 95, 99]:
+        percentiles.loc[len(percentiles)] = {
+            'Dataset': d,
+            'Percentile': f'p{p}',
+            'Response Time': df[df['Dataset'] == d]['Response Time'].quantile(p / 100)
+        }
 
-p2 = seaborn.barplot(ax = axs[1], data = job_counts_by_worker, x = 'Worker Assigned', y = 'Jobs', hue = 'Dataset')
-for container in axs[1].containers:
-    axs[1].bar_label(container, label_type = 'center')
+# quantiles = df.groupby('Dataset')['Response Time'].quantile(q = [0.5, 0.9, 0.95, 0.99])
+print(percentiles)
+
+# dfx = df[df['Response Time'] <= 1000]
+# p1 = seaborn.histplot(data = dfx, x = 'Response Time', hue = 'Dataset', binwidth = 1, stat = 'percent')
+
+# p2 = seaborn.barplot(data = job_counts_by_worker, x = 'Worker Assigned', y = 'Jobs', hue = 'Dataset')
+# p2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+p3 = seaborn.barplot(data = percentiles, x = 'Percentile', y = 'Response Time', hue = 'Dataset', palette = 'colorblind')
+
+print(df[df['Response Time'] <= 0])
 
 pyplot.show()
