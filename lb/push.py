@@ -107,7 +107,7 @@ if __name__ == '__main__':
         Path(LB_OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
 
         time_str = time.strftime("%Y%m%d-%H%M%S")
-        log_filename = f'{LB_OUTPUT_FOLDER}/{time_str}-{algo}-{job_weight_mean}-{job_interval_mean}.csv'
+        log_filename = f'{LB_OUTPUT_FOLDER}/{time_str}-{algo}-{runtime_min}m-{job_weight_mean}-{job_interval_mean}.csv'
         logging.basicConfig(
             filename = log_filename,
             format = '%(message)s',

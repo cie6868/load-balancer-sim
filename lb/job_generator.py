@@ -3,7 +3,6 @@
 # Usage: ./job_generator.py [number of jobs] [mean processing time of jobs (ms)] [mean interval between jobs (ms)]
 
 from numpy import char
-from pathlib import Path
 from rich import print
 from scipy.stats import poisson
 import sys
