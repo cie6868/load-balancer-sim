@@ -93,13 +93,12 @@ def threaded_pass_to_worker(con: socket.socket, worker_addr):
     encoded_job = json.dumps(job).encode('utf-8')
 
     try:
-        worker_id = int.from_bytes(con.recv(2), 'big')
-
         print(f'[blue]Sending job {job["id"]} with weight {job["weight"]} to worker {worker_id}...[/blue]')
 
         con.sendall(bytes([len(encoded_job)]))
         con.sendall(encoded_job)
 
+        worker_id = int.from_bytes(con.recv(2), 'big')
         response = con.recv(1)
         recv_time = time.time_ns()
 

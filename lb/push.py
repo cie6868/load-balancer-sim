@@ -66,12 +66,11 @@ def threaded_pass_to_worker(job: object):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((host, port))
 
-            worker_id = int.from_bytes(sock.recv(2), 'big')
-
             sock.sendall(bytes([len(encoded_job)]))
             sock.sendall(encoded_job)
             queued_time = time.time_ns()
 
+            worker_id = int.from_bytes(sock.recv(2), 'big')
             response = sock.recv(1)
             recv_time = time.time_ns()
             print(f'[blue]Got response {"SUCCESS" if response == b"1" else "FAILURE"} for job {job["id"]}.[/blue]')

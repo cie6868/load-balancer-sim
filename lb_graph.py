@@ -60,11 +60,11 @@ print(percentiles)
 # dfx = df[df['Response Time'] <= 1000]
 # p1 = seaborn.histplot(data = dfx, x = 'Response Time', hue = 'Dataset', binwidth = 1, stat = 'percent')
 
-# p2 = seaborn.barplot(data = job_counts_by_worker, x = 'Worker Assigned', y = 'Jobs', hue = 'Dataset')
-# p2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+p2 = seaborn.barplot(data = job_counts_by_worker, x = 'Worker Assigned', y = 'Jobs', hue = 'Dataset', palette = 'colorblind')
+p2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-p3 = seaborn.barplot(data = percentiles, x = 'Percentile', y = 'Response Time', hue = 'Dataset', palette = 'colorblind')
+# p3 = seaborn.barplot(data = percentiles, x = 'Percentile', y = 'Response Time', hue = 'Dataset', palette = 'colorblind')
 
-print(df[df['Response Time'] <= 0])
+# print(df[df['Response Time'] <= 0])
 
 pyplot.show()

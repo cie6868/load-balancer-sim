@@ -39,13 +39,14 @@ def processing_thread(thread_id: int, power: int):
     print(f'[blue]Started processing thread {thread_id}...[/blue]')
     try:
         while True:
-            (job, con) = job_queue.get(block = True)
+            (job, con, worker_id) = job_queue.get(block = True)
 
             print(f'[blue]Processing job {job["id"]} with weight {job["weight"]}...[/blue]')
             sleep_seconds = (job['weight'] / 1000)
             time.sleep(sleep_seconds / (power / 100))
 
             print(f'[blue]Responding to job {job["id"]}.[/blue]')
+            con.sendall(int.to_bytes(worker_id, 2, 'big'))
             con.sendall(b'1')
             con.close()
             job_queue.task_done()
@@ -80,12 +81,10 @@ def start_listening(address: str, port: int):
 def queue_incoming_job(con: socket.socket, worker_id: int):
     global jobs_received
 
-    con.sendall(int.to_bytes(worker_id, 2, 'big'))
-
     message_length = int.from_bytes(con.recv(1), 'big')
     encoded_job_bytes = con.recv(message_length)
     job = json.loads(encoded_job_bytes.decode('utf-8'))
-    job_queue.put((job, con))
+    job_queue.put((job, con, worker_id))
 
     with jobs_received_lock:
         jobs_received += 1

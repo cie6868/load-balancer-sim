@@ -41,8 +41,6 @@ def processing_thread(thread_id: int, worker_id: int, power: int, lb_hostname: s
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as con:
                     con.connect((lb_hostname, lb_port))
 
-                    con.sendall(int.to_bytes(worker_id, 2, 'big'))
-
                     message_length = int.from_bytes(con.recv(1), 'big')
                     encoded_job_bytes = con.recv(message_length)
                     job = json.loads(encoded_job_bytes.decode('utf-8'))
@@ -50,6 +48,8 @@ def processing_thread(thread_id: int, worker_id: int, power: int, lb_hostname: s
                     process_job(job, power)
 
                     print(f'[blue]Responding to job {job["id"]}.[/blue]')
+
+                    con.sendall(int.to_bytes(worker_id, 2, 'big'))
 
                     con.sendall(b'1')
                     con.close()
